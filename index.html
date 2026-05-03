@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Presensi IASS Surabaya</title>
+  
+  <!-- BARIS BARU: Pemanggil file manifest untuk PWA -->
+  <link rel="manifest" href="manifest.json">
+  
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
@@ -664,6 +668,19 @@
         var tglFormat = e.tanggal.split("-").reverse().join("/");
         item.innerHTML = "<div class='event-date-label'>" + tglFormat + "</div><div class='event-title'>" + e.nama + "</div><div class='event-kom'>" + e.komisariat + "</div>";
         list.appendChild(item);
+      });
+    }
+
+    // ==========================================
+    // --- DAFTARKAN SERVICE WORKER (PWA) ---
+    // ==========================================
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').then(function(registration) {
+          console.log('ServiceWorker sukses terdaftar dengan scope: ', registration.scope);
+        }, function(err) {
+          console.log('ServiceWorker gagal terdaftar: ', err);
+        });
       });
     }
   </script>
