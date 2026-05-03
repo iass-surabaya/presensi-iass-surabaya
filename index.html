@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Presensi IASS Surabaya</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; background-color: #f8f9fa; color: #212529; overflow-x: hidden; }
+    
+    /* --- LAYAR LOGIN OVERLAY --- */
+    #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #f8f9fa; z-index: 9999; display: flex; justify-content: center; align-items: center; }
+    .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 400px; border-top: 5px solid #e65100; }
+    .login-box input { width: 100%; box-sizing: border-box; }
+    .btn-login { width: 100%; background-color: #e65100; color: white; border: none; padding: 15px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    .btn-login:hover { background-color: #ff9800; }
+
+    /* --- CSS NAVIGASI RAIL & RESPONSIVE --- */
+    .sidebar { width: 70px; background-color: #e65100; color: white; display: flex; flex-direction: column; transition: 0.3s; flex-shrink: 0; z-index: 1000; position: relative; }
+    .sidebar.open { width: 250px; }
+    .sidebar h2 { font-size: 1rem; white-space: nowrap; overflow: hidden; text-align: center; margin: 20px 0 5px 0; opacity: 0; transition: 0.3s; }
+    .sidebar.open h2 { opacity: 1; }
+    .menu-toggle { background: none; border: none; color: white; padding: 20px; cursor: pointer; text-align: center; }
+    .nav-btn { background: none; border: none; color: white; padding: 15px 23px; text-align: left; display: flex; align-items: center; cursor: pointer; transition: 0.3s; width: 100%; border-left: 5px solid transparent; }
+    .nav-btn span.material-icons { margin-right: 25px; font-size: 24px; }
+    .nav-btn span.menu-text { white-space: nowrap; opacity: 0; transition: 0.2s; }
+    .sidebar.open span.menu-text { opacity: 1; }
+    .nav-btn:hover, .nav-btn.active { background-color: #ff9800; font-weight: bold; border-left: 5px solid white; }
+
+    @media (max-width: 768px) {
+      .sidebar { position: fixed; height: 100vh; left: -250px; width: 250px !important; }
+      .sidebar.mobile-open { left: 0; box-shadow: 5px 0 15px rgba(0,0,0,0.3); }
+      .hamburger-mobile { display: block !important; position: fixed; top: 15px; left: 15px; z-index: 999; background: #e65100; color: white; border: none; border-radius: 5px; padding: 8px; cursor: pointer; }
+    }
+    .hamburger-mobile { display: none; }
+
+    /* --- KARTU PROFIL ATAS --- */
+    .top-bar { display: flex; justify-content: flex-end; margin-bottom: 25px; }
+    #top-profile { background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-right: 4px solid #e65100; display: flex; flex-direction: row; align-items: center; gap: 15px; }
+    #top-profile.hidden { display: none !important; }
+    .profile-info { text-align: right; }
+    .profile-name { font-weight: bold; font-size: 15px; color: #212529; margin-bottom: 2px; }
+    .profile-role { font-size: 12px; color: #6c757d; }
+    .btn-logout { background-color: #e65100; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 5px; }
+    .btn-logout:hover { background-color: black; }
+
+    @media (max-width: 768px) {
+      .top-bar { justify-content: center; margin-top: 40px; } 
+      #top-profile { flex-direction: column; gap: 10px; text-align: center; }
+      .profile-info { text-align: center; }
+    }
+    
+    /* Konten Utama */
+    .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+    .view-section { display: none; width: 100%; }
+    .layout-presensi { display: flex; flex-direction: row; gap: 20px; }
+    .form-container { flex: 6; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
+    .history-container { flex: 4; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .logo-org { width: 110px; height: auto; margin-bottom: 15px; }
+    .judul-form { color: #e65100; font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+    
+    input[type="number"], input[type="text"], input[type="password"] { width: 80%; padding: 15px; font-size: 24px; text-align: center; border: 2px solid #ced4da; border-radius: 8px; margin-bottom: 20px; }
+    input:focus { outline: none; border-color: #e65100; }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    .jam-digital { font-size: 45px; font-weight: bold; color: #e65100; margin: 10px 0; font-family: 'Courier New', Courier, monospace; }
+    .hijri-date { color: #e65100; font-weight: bold; margin-top: 5px; font-size: 14px; text-transform: uppercase; }
+    .log-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+    .log-time { font-weight: bold; color: #e65100; margin-right: 10px; }
+
+    /* Dashboard & Tabel */
+    .card-container { display: flex; gap: 20px; margin-top: 20px; }
+    .card { flex: 1; background: white; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-top: 5px solid #e65100; }
+    .card h3 { color: #6c757d; margin: 0 0 15px 0; }
+    .card .angka { font-size: 3.5rem; font-weight: bold; color: #212529; }
+
+    .search-box { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+    table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    th, td { padding: 12px 15px; border-bottom: 1px solid #ddd; text-align: left; }
+    th { background-color: #e65100; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+
+    .nav-page-btn { background-color: #e65100; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+    .nav-page-btn:hover { background-color: #ff9800; }
+    .nav-page-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+    #toast { visibility: hidden; min-width: 250px; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 100; left: 50%; bottom: 30px; font-size: 17px; transform: translateX(-50%); color: white;}
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2s; }
+    .sukses { background-color: #28a745; }
+    .gagal { background-color: #dc3545; }
+    .duplikat { background-color: #ffc107; color: #212529 !important; }
+    @media (max-width: 768px) { .layout-presensi, .card-container { flex-direction: column; } }
+
+    /* ========================================= */
+    /* --- CSS KHUSUS PRINTER THERMAL (QR) --- */
+    /* ========================================= */
+    #print-area { display: none; } 
+
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      
+      /* Kertas Khusus Thermal 78x100mm */
+      @page { size: 78mm 100mm; margin: 0; }
+      
+      #print-area {
+        position: absolute; left: 0; top: 0;
+        width: 78mm; height: 100mm;
+        margin: 0; padding: 5mm; 
+        box-sizing: border-box; text-align: center;
+        background: white; color: black; font-family: 'Segoe UI', sans-serif;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+      }
+
+      /* Wadah QR Code */
+      #kartu-qrcode { margin: 10px 0; display: flex; justify-content: center; }
+      
+      #kartu-nama { font-size: 16px; font-weight: bold; margin-top: 8px; margin-bottom: 4px; color: black; }
+      #kartu-alamat { font-size: 12px; margin-bottom: 8px; color: black; }
+      #kartu-komisariat { font-size: 12px; font-style: italic; font-weight: bold; color: black; }
+    }
+
+    /* ========================================= */
+    /* --- CSS KALENDER KEGIATAN (BARU) --- */
+    /* ========================================= */
+    .kalender-layout { display: flex; gap: 25px; flex-wrap: wrap; }
+    .cal-left { flex: 5; min-width: 350px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .cal-right { flex: 4; min-width: 300px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #e65100; }
+    
+    .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; color: #e65100; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+    .day-name { font-weight: bold; padding: 10px 0; color: #6c757d; font-size: 12px; }
+    .day-cell { padding: 15px 5px; border-radius: 8px; cursor: pointer; transition: 0.2s; position: relative; font-weight: 500; }
+    .day-cell:hover { background-color: #fff3e0; color: #e65100; }
+    .day-cell.today { background-color: #e65100; color: white !important; }
+    .day-cell.has-event::after { content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; background-color: #ff9800; border-radius: 50%; }
+    .day-cell.not-current { opacity: 0.3; cursor: default; }
+
+    .event-item { padding: 15px; border-bottom: 1px solid #eee; }
+    .event-date-label { font-size: 12px; color: #e65100; font-weight: bold; margin-bottom: 5px; }
+    .event-title { font-weight: bold; font-size: 16px; margin-bottom: 3px; }
+    .event-kom { font-size: 13px; color: #6c757d; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div id="print-area">
+    <img src="https://i.imgur.com/0rgogYv.png" style="width: 45px; margin-bottom: 5px;">
+    <div style="font-size: 11px; font-weight: bold; margin-bottom: 5px;">IASS WILAYAH SURABAYA</div>
+    
+    <div id="kartu-qrcode"></div>
+    
+    <div id="kartu-nia" style="font-size: 14px; margin-top: 2px; font-family: monospace; font-weight: bold;"></div>
+    <div id="kartu-nama">NAMA LENGKAP</div>
+    <div id="kartu-alamat">ALAMAT</div>
+    <div id="kartu-komisariat">KOMISARIAT</div>
+  </div>
+
+  <div id="login-screen">
+    <div class="login-box">
+      <img src="https://i.imgur.com/0rgogYv.png" class="logo-org" alt="Logo IASS">
+      <h2 style="color: #e65100; margin-bottom: 5px;">SISTEM PRESENSI</h2>
+      <div style="font-size: 15px; font-weight: bold; color: #e65100; margin-bottom: 5px;">IASS WILAYAH SURABAYA</div>
+      <div style="color: #6c757d; margin-bottom: 25px;">Silakan login untuk mengakses terminal</div>
+      <input type="text" inputmode="numeric" id="loginNia" placeholder="NIA SEK. KOMISARIAT" autocomplete="off" style="font-size: 18px;">
+      <input type="password" inputmode="numeric" id="loginPin" placeholder="PIN" style="font-size: 18px;">
+      <button class="btn-login" onclick="eksekusiLogin()" id="btnActionLogin">MASUK</button>
+      <div id="loginPesan" style="color: #dc3545; margin-top: 15px; font-weight: bold; min-height: 20px;"></div>
+    </div>
+  </div>
+
+  <button class="hamburger-mobile" onclick="toggleSidebar()"><span class="material-icons">menu</span></button>
+
+  <div class="sidebar" id="mySidebar">
+    <button class="menu-toggle" onclick="toggleSidebar()"><span class="material-icons">menu</span></button>
+    <h2>IASS WILAYAH SURABAYA</h2>
+    <button class="nav-btn active" onclick="pindahTab('view-presensi', this)" title="Presensi">
+      <span class="material-icons">fingerprint</span><span class="menu-text">PRESENSI</span>
+    </button>
+    <button class="nav-btn" id="menu-laporan" onclick="pindahTab('view-dashboard', this)" title="Laporan">
+      <span class="material-icons">assessment</span><span class="menu-text">LAPORAN</span>
+    </button>
+    <button class="nav-btn" onclick="pindahTab('view-anggota', this)" title="Data Anggota">
+      <span class="material-icons">group</span><span class="menu-text">DATA ANGGOTA</span>
+    </button>
+    <button class="nav-btn" onclick="pindahTab('view-kalender', this)" title="Agenda Kegiatan">
+      <span class="material-icons">event_note</span><span class="menu-text">AGENDA</span>
+    </button>
+  </div>
+
+  <div class="main-content">
+    
+    <div class="top-bar">
+      <div id="top-profile" class="hidden">
+        <div class="profile-info">
+          <div id="profile-name" class="profile-name">Nama Admin</div>
+          <div id="profile-role" class="profile-role">Role Komisariat</div>
+        </div>
+        <button class="btn-logout" onclick="prosesLogout()">
+          <span class="material-icons" style="font-size: 14px;">logout</span> LOGOUT
+        </button>
+      </div>
+    </div>
+
+    <div id="view-presensi" class="view-section layout-presensi" style="display: flex;">
+      <div class="form-container">
+        <img src="https://i.imgur.com/0rgogYv.png" class="logo-org" alt="Logo IASS">
+        <div class="judul-form">PRESENSI ANGGOTA IASS</div>
+        <div class="judul-form" style="font-size: 20px;">WILAYAH SURABAYA</div>
+        <img src="https://i.imgur.com/5CKy22W.png" alt="Basmalah" style="height: 45px; width: auto; margin: 10px 0; opacity: 0.85;">
+        <div id="displayJam" class="jam-digital">00:00:00</div>
+        <div id="displayHijri" class="hijri-date">Memuat Tanggal...</div>
+        <input type="number" id="niaInput" placeholder="Ketik NIA lalu Enter" autocomplete="off">
+        <br>
+        <button style="background-color: #e65100; color: white; border: none; padding: 10px 30px; font-size: 16px; border-radius: 6px; cursor: pointer;" onclick="kirimData()">ENTER</button>
+      </div>
+      <div class="history-container">
+        <h3 style="margin-top: 0; border-bottom: 2px solid #e65100; padding-bottom: 10px;">Histori Terbaru</h3>
+        <div id="historiList"></div>
+      </div>
+    </div>
+
+    <div id="view-dashboard" class="view-section">
+      <h2 style="color: #e65100; margin-top: 0;">Ringkasan Kehadiran Hari Ini</h2>
+      <div class="card-container">
+        <div class="card"><h3>TOTAL HADIR</h3><div class="angka" id="dash-hadir">...</div></div>
+        <div class="card"><h3>BELUM HADIR</h3><div class="angka" id="dash-belum">...</div></div>
+        <div class="card" style="border-top-color: #dc3545;"><h3>GUEST/ TIDAK TERDAFTAR</h3><div class="angka" id="dash-guest">...</div></div>
+      </div>
+      <h2 style="color: #e65100; margin-top: 40px; border-bottom: 2px solid #ddd; padding-bottom: 10px;">Rekapitulasi per Komisariat</h2>
+      <table id="tabelRekap" style="margin-top: 15px;">
+        <thead><tr><th>KOMISARIAT</th><th style="text-align: center;">ANGGOTA</th><th style="text-align: center;">HADIR</th><th style="text-align: center;">TIDAK HADIR</th><th style="text-align: center;">%</th><th style="text-align: center;">PERINGKAT</th></tr></thead>
+        <tbody id="tbodyRekap"><tr><td colspan="6" style="text-align:center;">Memuat data...</td></tr></tbody>
+      </table>
+    </div>
+
+    <div id="view-anggota" class="view-section">
+      <h2 style="color: #e65100; margin-top: 0;">Database Anggota</h2>
+      <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+        <input type="text" id="searchInput" class="search-box" style="margin-bottom: 0; flex: 1; min-width: 200px;" onkeyup="resetPaginasiDanCari()" placeholder="Cari nama, NIA, atau HP...">
+        <select id="filterKomisariat" style="padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 6px; min-width: 180px; outline: none;" onchange="resetPaginasiDanCari()">
+          <option value="">Semua Komisariat</option>
+        </select>
+        <button style="background-color: #e65100; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s;" onclick="downloadDataFilter()" onmouseover="this.style.backgroundColor='black'" onmouseout="this.style.backgroundColor='#e65100'">
+          DOWNLOAD
+        </button>
+      </div>
+      <table id="tabelAnggota">
+        <thead>
+          <tr>
+            <th style="text-align: center; width: 50px;">NO</th>
+            <th style="text-align: center;">NIA</th>
+            <th>NAMA</th>
+            <th>ALAMAT</th>
+            <th>HP/ WA</th>
+            <th>KOMISARIAT</th>
+            <th style="text-align: center;">AKSI</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyAnggota"><tr><td colspan="7" style="text-align:center;">Memuat data...</td></tr></tbody>
+      </table>
+      <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; align-items: center;">
+        <button class="nav-page-btn" onclick="firstPage()">First</button>
+        <button class="nav-page-btn" onclick="prevPage()">Prev</button>
+        <span id="pageInfo" style="font-weight: bold; color: #101010;">Halaman 1</span>
+        <button class="nav-page-btn" onclick="nextPage()">Next</button>
+        <button class="nav-page-btn" onclick="lastPage()">Last</button>
+      </div>
+    </div>
+
+    <div id="view-kalender" class="view-section">
+      <h2 style="color: #e65100; margin-top: 0;">Agenda Kegiatan IASS Surabaya</h2>
+      <div class="kalender-layout">
+        <div class="cal-left">
+          <div class="cal-header">
+            <button onclick="changeMonth(-1)" class="nav-page-btn"><span class="material-icons">chevron_left</span></button>
+            <h3 id="calMonthYear" style="margin: 0;">...</h3>
+            <button onclick="changeMonth(1)" class="nav-page-btn"><span class="material-icons">chevron_right</span></button>
+          </div>
+          <div class="cal-grid" id="calGridHeader">
+            <div class="day-name">MING</div><div class="day-name">SEN</div><div class="day-name">SEL</div><div class="day-name">RAB</div><div class="day-name">KAM</div><div class="day-name">JUM</div><div class="day-name">SAB</div>
+          </div>
+          <div class="cal-grid" id="calGridBody"></div>
+        </div>
+        <div class="cal-right">
+          <h3 id="agendaTitle" style="color: #e65100; margin-top: 0;">Agenda Bulan Ini</h3>
+          <div id="agendaList"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast">Notifikasi</div>
+
+  <script>
+    // ==========================================
+    // --- KONFIGURASI API (WAJIB ADA) ---
+    // ==========================================
+    const API_URL = "https://script.google.com/macros/s/AKfycbwbz79vIs88sranDbaXTC2bHKgmn7cKR8EdR4KVMPZzX6g8icW0IpQz5Pdn9xF6iEKQ_A/exec";
+
+    // Fungsi Bantuan untuk mengirim data (POST) ke Google Apps Script
+    function fetchPOST(action, data) {
+      const formData = new URLSearchParams();
+      formData.append('action', action);
+      for (const key in data) { formData.append(key, data[key]); }
+      
+      return fetch(API_URL, {
+        method: 'POST',
+        body: formData
+      }).then(res => res.json());
+    }
+
+    // Fungsi Bantuan untuk mengambil data (GET) dari Google Apps Script
+    function fetchGET(action, params = {}) {
+      let url = API_URL + "?action=" + action;
+      for (const key in params) { url += "&" + key + "=" + encodeURIComponent(params[key]); }
+      
+      return fetch(url).then(res => {
+        if (action === 'exportDetail') return res.text(); // Khusus CSV ambil format teks
+        return res.json();
+      });
+    }
+
+    // ==========================================
+    // --- 1. SISTEM LOGIN & SESI ---
+    // ==========================================
+    window.onload = function() { 
+      if (sessionStorage.getItem("isLoggedIn") === "true") { terapkanRole(); } 
+    };
+
+    function eksekusiLogin() {
+      var nia = document.getElementById("loginNia").value; var pin = document.getElementById("loginPin").value;
+      var pesan = document.getElementById("loginPesan"); var btn = document.getElementById("btnActionLogin");
+      if(nia === "" || pin === "") { pesan.innerText = "NIA dan PIN wajib diisi!"; return; }
+      pesan.innerText = ""; btn.innerText = "MEMERIKSA..."; btn.disabled = true;
+
+      // PENGGANTI google.script.run
+      fetchPOST('login', { nia: nia, pin: pin })
+      .then(hasil => {
+        if(hasil.status === true) {
+          sessionStorage.setItem("isLoggedIn", "true"); sessionStorage.setItem("userName", hasil.nama);
+          sessionStorage.setItem("userRole", hasil.role); sessionStorage.setItem("userKom", hasil.komisariat);
+          terapkanRole();
+        } else {
+          pesan.innerText = hasil.pesan; btn.innerText = "MASUK"; btn.disabled = false;
+        }
+      }).catch(err => {
+        pesan.innerText = "Gagal terhubung ke server."; btn.innerText = "MASUK"; btn.disabled = false;
+      });
+    }
+
+    function terapkanRole() {
+      document.getElementById("login-screen").style.display = "none";
+      var nama = sessionStorage.getItem("userName"); var role = sessionStorage.getItem("userRole"); var kom = sessionStorage.getItem("userKom");
+
+      document.getElementById("top-profile").classList.remove("hidden");
+      document.getElementById("profile-name").innerText = nama;
+      var teksRole = role; if (kom !== "-" && kom !== "") { teksRole += " " + kom; }
+      document.getElementById("profile-role").innerText = teksRole;
+      
+      if (role !== "Super Admin") { document.getElementById("menu-laporan").style.display = "none"; } else { document.getElementById("menu-laporan").style.display = "flex"; }
+      document.getElementById("niaInput").focus();
+    }
+
+    function prosesLogout() {
+      sessionStorage.clear(); 
+      document.getElementById("loginNia").value = ""; document.getElementById("loginPin").value = ""; document.getElementById("loginPesan").innerText = "";
+      document.getElementById("top-profile").classList.add("hidden");
+      document.getElementById("mySidebar").classList.remove("open");
+      if (window.innerWidth <= 768) { document.getElementById("mySidebar").classList.remove("mobile-open"); }
+      document.getElementById("login-screen").style.display = "flex";
+      document.getElementById("btnActionLogin").innerText = "MASUK";
+      document.getElementById("btnActionLogin").disabled = false;
+    }
+
+    document.getElementById("loginPin").addEventListener("keypress", function(e) { if (e.key === "Enter") eksekusiLogin(); });
+
+    // ==========================================
+    // --- 2. SISTEM TANGGAL & JAM ---
+    // ==========================================
+    function updateDate() { document.getElementById('displayHijri').innerText = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()).toUpperCase(); } updateDate();
+    function updateClock() { const now = new Date(); document.getElementById('displayJam').innerText = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0') + ":" + String(now.getSeconds()).padStart(2, '0'); }
+    setInterval(updateClock, 1000); updateClock(); 
+
+    // ==========================================
+    // --- 3. SISTEM PRESENSI ---
+    // ==========================================
+    
+    // PENGGANTI google.script.run
+    fetchGET('getHistori').then(muatHistoriAwal).catch(console.error);
+    
+    var inputField = document.getElementById("niaInput");
+    document.body.addEventListener('click', function(e) { 
+      if (sessionStorage.getItem("isLoggedIn") === "true") {
+        if(document.getElementById('view-presensi').style.display !== 'none' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { inputField.focus(); }
+      }
+    });
+
+    inputField.addEventListener("keypress", function(event) { if (event.key === "Enter") { event.preventDefault(); kirimData(); } });
+
+    function kirimData() {
+      var nia = inputField.value; if(nia === "") return;
+      inputField.value = ""; inputField.focus();
+      
+      // PENGGANTI google.script.run
+      fetchPOST('presensi', { niaInput: nia })
+      .then(tanganiRespon).catch(err => console.error("Gagal presensi:", err));
+    }
+
+    function tanganiRespon(hasil) {
+      if(!hasil || hasil.status === undefined) return;
+      var toast = document.getElementById("toast"); toast.textContent = hasil.pesan;
+      if (hasil.status === "duplikat") { toast.className = "show duplikat"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 1000); } 
+      else if (hasil.status === true) { toast.className = "show sukses"; tambahKeHistori(hasil.waktu, hasil.nia, hasil.nama, hasil.komisariat, true); setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 2500); } 
+      else { toast.className = "show gagal"; tambahKeHistori(hasil.waktu, hasil.nia, "Guest (" + hasil.nama + ")", "-", false); setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 2500); }
+    }
+
+    function tambahKeHistori(waktu, nia, nama, komisariat, isSukses) {
+      var list = document.getElementById("historiList"); var logBaru = document.createElement("div"); logBaru.className = "log-item";
+      var warnaTeks = isSukses ? "#212529" : "#dc3545";
+      logBaru.innerHTML = "<span class='log-time'>" + waktu + "</span> <span style='color:"+warnaTeks+"'><strong>" + nia + "</strong> - " + nama + " <em>(" + komisariat + ")</em></span>";
+      list.insertBefore(logBaru, list.firstChild);
+    }
+
+    function muatHistoriAwal(dataHistori) {
+      if (!dataHistori || dataHistori.length === 0) return;
+      for (var i = dataHistori.length - 1; i >= 0; i--) { tambahKeHistori(dataHistori[i].waktu, dataHistori[i].nia, dataHistori[i].nama, dataHistori[i].komisariat, dataHistori[i].isSukses); }
+    }
+
+    // ==========================================
+    // --- 4. NAVIGASI & LOAD DATA DENGAN FILTER ---
+    // ==========================================
+    function toggleSidebar() { var sidebar = document.getElementById("mySidebar"); if (window.innerWidth > 768) { sidebar.classList.toggle("open"); } else { sidebar.classList.toggle("mobile-open"); } }
+
+    function pindahTab(idView, elementTombol) {
+      var btns = document.getElementsByClassName("nav-btn"); for (var i = 0; i < btns.length; i++) { btns[i].classList.remove("active"); }
+      elementTombol.classList.add("active");
+      var views = document.getElementsByClassName("view-section"); for (var i = 0; i < views.length; i++) { views[i].style.display = "none"; }
+      var aktifView = document.getElementById(idView);
+      if(idView === 'view-presensi') { aktifView.style.display = "flex"; inputField.focus(); } else { aktifView.style.display = "block"; }
+
+      var userRole = sessionStorage.getItem("userRole"); var userKom = sessionStorage.getItem("userKom");
+      
+      // PENGGANTI google.script.run
+      if (idView === 'view-dashboard') { 
+        document.getElementById('dash-hadir').innerText = "..."; 
+        fetchGET('getDashboard').then(tampilDashboard).catch(console.error); 
+      } 
+      else if (idView === 'view-anggota') { 
+        fetchGET('getAnggota', { role: userRole, komisariat: userKom }).then(tampilAnggota).catch(console.error); 
+      }
+      else if (idView === 'view-kalender') { 
+        muatAgenda(); 
+      }
+
+      if (window.innerWidth <= 768) { document.getElementById("mySidebar").classList.remove("mobile-open"); }
+    }
+
+    // --- DASHBOARD ---
+    function tampilDashboard(data) {
+      if(!data || !data.global) return;
+      document.getElementById('dash-hadir').innerText = data.global.hadir; document.getElementById('dash-belum').innerText = data.global.belumHadir; document.getElementById('dash-guest').innerText = data.global.guest;
+      var tbody = document.getElementById("tbodyRekap"); tbody.innerHTML = ""; 
+      if (data.detail.length === 0) { tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>Belum ada data master komisariat</td></tr>"; return; }
+      for (var i = 0; i < data.detail.length; i++) {
+        var row = data.detail[i]; var tr = document.createElement("tr"); var medali = "";
+        if (row.peringkat === 1) medali = "🥇 "; else if (row.peringkat === 2) medali = "🥈 "; else if (row.peringkat === 3) medali = "🥉 ";
+        var warnaPersen = row.persen < 50 ? "color: #dc3545;" : "color: #212529;";
+        tr.innerHTML = "<td><strong>" + row.nama + "</strong></td><td style='text-align: center;'>" + row.anggota + "</td>" +
+          "<td style='text-align: center;'><span onclick='unduhDetail(\"" + row.nama + "\", \"Hadir\")' style='color: #28a745; text-decoration: underline; font-weight: bold; cursor: pointer;' title='Klik untuk unduh data'>" + row.hadir + "</span></td>" +
+          "<td style='text-align: center;'><span onclick='unduhDetail(\"" + row.nama + "\", \"Tidak Hadir\")' style='color: #dc3545; text-decoration: underline; font-weight: bold; cursor: pointer;' title='Klik untuk unduh data'>" + row.tidakHadir + "</span></td>" +
+          "<td style='text-align: center; font-weight: bold; " + warnaPersen + "'>" + row.persen + "%</td><td style='text-align: center; font-size: 1.1em;'>" + medali + "<strong>" + row.peringkat + "</strong></td>";
+        tbody.appendChild(tr);
+      }
+    }
+
+    // --- TABEL ANGGOTA ---
+    var dataAnggotaFull = []; var dataFiltered = []; var currentPage = 1; var rowsPerPage = 50;
+
+    function tampilAnggota(dataArray) {
+      if(!dataArray) return;
+      dataAnggotaFull = dataArray; dataFiltered = dataArray; 
+      var dropdown = document.getElementById("filterKomisariat"); dropdown.innerHTML = '<option value="">Semua Komisariat</option>'; 
+      var listKomisariat = new Set();
+      for(var i = 0; i < dataArray.length; i++) { var kom = dataArray[i][4]; if(kom && kom !== "-") listKomisariat.add(kom); }
+      var arrayKomisariat = Array.from(listKomisariat).sort();
+      for(var j = 0; j < arrayKomisariat.length; j++) { var opt = document.createElement("option"); opt.value = arrayKomisariat[j]; opt.textContent = arrayKomisariat[j]; dropdown.appendChild(opt); }
+      renderTable();
+    }
+
+    function renderTable() {
+      var tbody = document.getElementById("tbodyAnggota"); tbody.innerHTML = "";
+      var start = (currentPage - 1) * rowsPerPage; var end = start + rowsPerPage;
+      var paginatedData = dataFiltered.slice(start, end);
+      
+      for(var i = 0; i < paginatedData.length; i++) {
+        var tr = document.createElement("tr"); var nomorUrut = start + i + 1; 
+        
+        var tombolPrint = "<button style='background-color: #343a40; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s;' onclick='cetakKartu(\"" + paginatedData[i][0] + "\", \"" + paginatedData[i][1] + "\", \"" + paginatedData[i][2] + "\", \"" + paginatedData[i][4] + "\")' title='Print QR Code'><span class='material-icons' style='font-size: 16px; vertical-align: middle;'>qr_code_2</span></button>";
+
+        tr.innerHTML = "<td style='text-align: center;'>" + nomorUrut + "</td><td style='text-align: center; color: #e65100; font-weight: bold;'>" + paginatedData[i][0] + "</td>" +
+                       "<td><strong>" + paginatedData[i][1] + "</strong></td><td>" + paginatedData[i][2] + "</td><td>" + paginatedData[i][3] + "</td><td>" + paginatedData[i][4] + "</td>" +
+                       "<td style='text-align: center;'>" + tombolPrint + "</td>";
+        tbody.appendChild(tr);
+      }
+      var totalPages = Math.ceil(dataFiltered.length / rowsPerPage); document.getElementById("pageInfo").innerText = "Halaman " + currentPage + " dari " + (totalPages || 1); updatePaginationButtons(totalPages);
+    }
+
+    function next() { if((currentPage * rowsPerPage) < dataFiltered.length) { currentPage++; renderTable(); } } function prev() { if(currentPage > 1) { currentPage--; renderTable(); } }
+    function firstPage() { currentPage = 1; renderTable(); } function lastPage() { currentPage = Math.ceil(dataFiltered.length / rowsPerPage); renderTable(); }
+    function nextPage() { next(); } function prevPage() { prev(); }
+
+    function updatePaginationButtons(totalPages) {
+      var btns = document.getElementsByClassName("nav-page-btn");
+      btns[0].disabled = (currentPage === 1); btns[1].disabled = (currentPage === 1); btns[2].disabled = (currentPage >= totalPages); btns[3].disabled = (currentPage >= totalPages); 
+    }
+
+    function resetPaginasiDanCari() {
+      var textCari = document.getElementById("searchInput").value.toUpperCase(); var filterKom = document.getElementById("filterKomisariat").value; 
+      dataFiltered = dataAnggotaFull.filter(function(row) {
+        var textNia = row[0] ? row[0].toString().toUpperCase() : ""; var textNama = row[1] ? row[1].toString().toUpperCase() : ""; var textHP = row[3] ? row[3].toString().toUpperCase() : "";
+        var matchText = (textNia.indexOf(textCari) > -1 || textNama.indexOf(textCari) > -1 || textHP.indexOf(textCari) > -1);
+        var matchKom = true; if (filterKom !== "") { matchKom = (row[4] === filterKom); } return matchText && matchKom;
+      });
+      currentPage = 1; renderTable();
+    }
+
+    function downloadDataFilter() {
+      var namaKomisariat = document.getElementById("filterKomisariat").value; var namaFile = "Data_Anggota"; namaFile += (namaKomisariat !== "") ? "_" + namaKomisariat.replace(/ /g, "_") : "_Semua_Komisariat"; namaFile += ".csv";
+      var csvContent = '"NO";"NIA";"NAMA";"ALAMAT";"HP/ WA";"KOMISARIAT"\n';
+      for (var i = 0; i < dataFiltered.length; i++) {
+         var nomor = i + 1; var nia = '"' + dataFiltered[i][0].toString().replace(/"/g, '""') + '"'; var nama = '"' + dataFiltered[i][1].toString().replace(/"/g, '""') + '"';
+         var alamat = '"' + dataFiltered[i][2].toString().replace(/"/g, '""') + '"'; var hp = '"' + dataFiltered[i][3].toString().replace(/"/g, '""') + '"'; var komisariat = '"' + dataFiltered[i][4].toString().replace(/"/g, '""') + '"';
+         csvContent += nomor + ";" + nia + ";" + nama + ";" + alamat + ";" + hp + ";" + komisariat + "\n";
+      }
+      var blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); var link = document.createElement("a"); var url = URL.createObjectURL(blob);
+      link.setAttribute("href", url); link.setAttribute("download", namaFile); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      var toast = document.getElementById("toast"); toast.textContent = "Berhasil mengunduh " + dataFiltered.length + " data!"; toast.className = "show sukses"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 2500);
+    }
+
+    function unduhDetail(komisariat, status) {
+      var toast = document.getElementById("toast"); toast.textContent = "Menyiapkan Excel " + status + " " + komisariat + "..."; toast.className = "show duplikat"; 
+      
+      // PENGGANTI google.script.run
+      fetchGET('exportDetail', { komisariat: komisariat, status: status })
+      .then(csvContent => {
+        var blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); var link = document.createElement("a"); var url = URL.createObjectURL(blob);
+        var namaFile = "Detail_" + status.replace(" ", "") + "_" + komisariat.replace(" ", "") + ".csv";
+        link.setAttribute("href", url); link.setAttribute("download", namaFile); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        toast.textContent = "Berhasil diunduh!"; toast.className = "show sukses"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 2500);
+      }).catch(err => {
+        toast.textContent = "Gagal mengunduh file."; toast.className = "show gagal"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 2500);
+      });
+    }
+
+    // ==========================================
+    // --- 5. MESIN CETAK THERMAL QR CODE ---
+    // ==========================================
+    function cetakKartu(nia, nama, alamat, komisariat) {
+      document.getElementById("kartu-nia").innerText = nia;
+      document.getElementById("kartu-nama").innerText = nama.toUpperCase();
+      document.getElementById("kartu-alamat").innerText = alamat;
+      document.getElementById("kartu-komisariat").innerText = "Komisariat " + komisariat;
+
+      var qrContainer = document.getElementById("kartu-qrcode");
+      qrContainer.innerHTML = ""; 
+      
+      new QRCode(qrContainer, {
+        text: nia,
+        width: 100,          
+        height: 100,         
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H 
+      });
+
+      setTimeout(function() {
+        window.print();
+      }, 100);
+    }
+
+    // ==========================================
+    // --- 6. LOGIKA KALENDER AGENDA (BARU) ---
+    // ==========================================
+    var agendaGlobal = [];
+    var dateFocus = new Date(); 
+
+    function muatAgenda() {
+      // PENGGANTI google.script.run
+      fetchGET('getAgenda')
+      .then(data => {
+        agendaGlobal = data;
+        renderCalendar();
+      }).catch(console.error);
+    }
+
+    function renderCalendar() {
+      var month = dateFocus.getMonth();
+      var year = dateFocus.getFullYear();
+      var monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+      
+      document.getElementById("calMonthYear").innerText = monthNames[month] + " " + year;
+      document.getElementById("agendaTitle").innerText = "Agenda " + monthNames[month];
+      
+      var grid = document.getElementById("calGridBody");
+      grid.innerHTML = "";
+
+      var firstDay = new Date(year, month, 1).getDay();
+      var daysInMonth = new Date(year, month + 1, 0).getDate();
+      var today = new Date();
+
+      for (let i = 0; i < firstDay; i++) {
+        var div = document.createElement("div"); div.className = "day-cell not-current"; grid.appendChild(div);
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        var div = document.createElement("div");
+        div.className = "day-cell";
+        div.innerText = day;
+        
+        var dateKey = year + "-" + ("0" + (month + 1)).slice(-2) + "-" + ("0" + day).slice(-2);
+        
+        if (agendaGlobal.some(a => a.tanggal === dateKey)) div.classList.add("has-event");
+        if (today.getDate() === day && today.getMonth() === month && today.getFullYear() === year) div.classList.add("today");
+
+        div.onclick = (function(d, k) { return () => showAgendaDetail(d, k); })(day, dateKey);
+        grid.appendChild(div);
+      }
+      showAgendaDetail(null, null); 
+    }
+
+    function changeMonth(step) {
+      dateFocus.setMonth(dateFocus.getMonth() + step);
+      renderCalendar();
+    }
+
+    function showAgendaDetail(day, dateKey) {
+      var list = document.getElementById("agendaList");
+      list.innerHTML = "";
+      
+      var events = [];
+      if (dateKey) {
+        events = agendaGlobal.filter(a => a.tanggal === dateKey);
+        document.getElementById("agendaTitle").innerText = "Acara Tanggal " + day;
+      } else {
+        var mStr = ("0" + (dateFocus.getMonth() + 1)).slice(-2);
+        var yStr = dateFocus.getFullYear().toString();
+        events = agendaGlobal.filter(a => a.tanggal.startsWith(yStr + "-" + mStr));
+        document.getElementById("agendaTitle").innerText = "Agenda Bulan Ini";
+      }
+
+      if (events.length === 0) {
+        list.innerHTML = "<p style='text-align:center; color:#999; margin-top:20px;'>Tidak ada jadwal kegiatan.</p>";
+        return;
+      }
+
+      events.sort((a,b) => a.tanggal.localeCompare(b.tanggal)).forEach(e => {
+        var item = document.createElement("div");
+        item.className = "event-item";
+        var tglFormat = e.tanggal.split("-").reverse().join("/");
+        item.innerHTML = "<div class='event-date-label'>" + tglFormat + "</div><div class='event-title'>" + e.nama + "</div><div class='event-kom'>" + e.komisariat + "</div>";
+        list.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
